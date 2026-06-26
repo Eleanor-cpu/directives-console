@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Directives — Task Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: rgba(255, 255, 255, 0.035);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --text-primary: #e6edf3;
+    --text-muted: #6b7785;
+    --cyan: #5eead4;
+    --violet: #a78bfa;
+    --green: #34d399;
+    --danger: #f87171;
+    --radius: 14px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at 15% 0%, rgba(94, 234, 212, 0.07), transparent 45%),
+                radial-gradient(circle at 85% 100%, rgba(167, 139, 250, 0.07), transparent 45%),
+                var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: center;
+    padding: 56px 20px 80px;
+  }
+
+  .console {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  /* ---------- Header ---------- */
+  header { margin-bottom: 28px; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .eyebrow::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+    margin-top: 6px;
+  }
+
+  /* ---------- Composer ---------- */
+  .composer {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .input-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .composer input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 14px 52px 14px 16px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 15px;
+    backdrop-filter: blur(12px);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .composer input::placeholder { color: var(--text-muted); }
+
+  .composer input:focus {
+    outline: none;
+    border-color: rgba(94, 234, 212, 0.5);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .kbd-hint {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 3px 6px;
+    pointer-events: none;
+  }
+
+  .composer input.input-shake {
+    animation: shake 0.4s ease;
+    border-color: rgba(248, 113, 113, 0.6);
+  }
+
+  @keyframes shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60% { transform: translateX(4px); }
+  }
+
+  .composer button {
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    border: none;
+    border-radius: var(--radius);
+    padding: 0 22px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    color: #08110f;
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+
+  .composer button:hover { filter: brightness(1.08); }
+  .composer button:active { transform: scale(0.96); }
+
+  .char-counter {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: right;
+    margin-bottom: 18px;
+    min-height: 14px;
+  }
+
+  .char-counter.near-limit { color: var(--danger); }
+
+  /* ---------- Filter + Sort bar ---------- */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .tabs { display: flex; gap: 4px; }
+
+  .tab {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+
+  .tab:hover { color: var(--text-primary); }
+
+  .tab.active {
+    color: var(--bg);
+    background: var(--cyan);
+    font-weight: 500;
+  }
+
+  /* ---------- Sort toggle ---------- */
+  .sort-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sort-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .sort-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .sort-btn {
+    background: none;
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+    white-space: nowrap;
+    letter-spacing: 0.03em;
+  }
+
+  .sort-btn:hover { color: var(--text-primary); }
+
+  .sort-btn.active {
+    background: rgba(94, 234, 212, 0.12);
+    color: var(--cyan);
+  }
+
+  .meta-count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .meta-count span { color: var(--cyan); }
+
+  /* ---------- Storage badge ---------- */
+  .storage-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: 0.06em;
+  }
+
+  .storage-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--violet);
+    flex-shrink: 0;
+  }
+
+  .storage-badge.idb::before { background: var(--cyan); }
+
+  /* ---------- Task list ---------- */
+  .task-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .task {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 14px 14px 14px 18px;
+    backdrop-filter: blur(12px);
+    overflow: hidden;
+    animation: rise 0.22s ease both;
+    transition: opacity 0.2s ease, transform 0.2s ease, height 0.2s ease,
+                padding 0.2s ease, margin 0.2s ease, border-width 0.2s ease;
+    cursor: default;
+    outline: none;
+  }
+
+  /* Keyboard focus ring on the task row itself */
+  .task:focus {
+    border-color: rgba(94, 234, 212, 0.45);
+    box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.15);
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .task.removing {
+    opacity: 0;
+    transform: translateX(12px) scale(0.97);
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    pointer-events: none;
+  }
+
+  .task::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--cyan);
+    transition: background 0.2s ease;
+  }
+
+  .task.completed::before { background: var(--green); }
+
+  .task-toggle {
+    width: 20px;
+    height: 20px;
+    border-radius: 7px;
+    border: 1.5px solid var(--text-muted);
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    background: transparent;
+  }
+
+  .task-toggle:hover { border-color: var(--cyan); }
+
+  .task.completed .task-toggle {
+    background: var(--green);
+    border-color: var(--green);
+  }
+
+  .task-toggle svg {
+    width: 12px;
+    height: 12px;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  .task.completed .task-toggle svg { opacity: 1; }
+
+  .task-text {
+    flex: 1;
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--text-primary);
+    cursor: text;
+    word-break: break-word;
+  }
+
+  .task.completed .task-text {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    text-decoration-color: rgba(107, 119, 133, 0.6);
+  }
+
+  .task-edit-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--violet);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 15px;
+  }
+
+  .task-edit-input:focus { outline: none; }
+
+  .task-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+
+  .task-delete:hover {
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.1);
+  }
+
+  .task-delete svg { width: 16px; height: 16px; }
+
+  /* ---------- Empty state ---------- */
+  .empty-state {
+    text-align: center;
+    padding: 48px 12px;
+    color: var(--text-muted);
+  }
+
+  .empty-state .glyph {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    color: var(--violet);
+  }
+
+  .empty-state p { font-size: 14px; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--panel-border);
+  }
+
+  .footer-hint {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .footer-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .ghost-btn {
+    background: none;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .ghost-btn:hover { color: var(--cyan); border-color: rgba(94, 234, 212, 0.4); }
+
+  .ghost-btn.danger-hover:hover { color: var(--danger); border-color: rgba(248, 113, 113, 0.4); }
+
+  .ghost-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ---------- Toasts ---------- */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+    z-index: 50;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: rgba(15, 19, 26, 0.92);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--cyan);
+    backdrop-filter: blur(14px);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    animation: toast-in 0.18s ease;
+    white-space: nowrap;
+  }
+
+  .toast.warn { border-left-color: var(--danger); }
+  .toast.success { border-left-color: var(--green); }
+  .toast.fade-out { animation: toast-out 0.18s ease forwards; }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes toast-out {
+    to { opacity: 0; transform: translateY(-6px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .task, .toast { animation: none; }
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 420px) {
+    .toast { white-space: normal; max-width: 80vw; text-align: center; }
+    .sort-label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="console">
+  <header>
+    <div class="eyebrow">Session active · <span id="storage-mode-badge" class="storage-badge">local-only</span></div>
+    <h1>Directives</h1>
+  </header>
+
+  <form class="composer" id="composer">
+    <div class="input-wrap">
+      <input
+        type="text"
+        id="task-input"
+        placeholder="Log a new directive…"
+        maxlength="200"
+        autocomplete="off"
+        aria-label="New task"
+      >
+      <span class="kbd-hint" id="kbd-hint">⌘K</span>
+    </div>
+    <button type="submit">Add</button>
+  </form>
+  <div class="char-counter" id="char-counter"></div>
+
+  <div class="filter-bar">
+    <div class="tabs" id="filter-tabs" role="tablist">
+      <button class="tab active" data-filter="all" role="tab" aria-selected="true">All</button>
+      <button class="tab" data-filter="active" role="tab" aria-selected="false">Active</button>
+      <button class="tab" data-filter="completed" role="tab" aria-selected="false">Completed</button>
+    </div>
+    <div class="sort-controls" aria-label="Sort order">
+      <span class="sort-label">Sort</span>
+      <div class="sort-toggle" role="group" aria-label="Sort by">
+        <button class="sort-btn active" data-sort="date" aria-pressed="true">Date</button>
+        <button class="sort-btn" data-sort="status" aria-pressed="false">Status</button>
+      </div>
+    </div>
+    <div class="meta-count" id="meta-count"><span>0</span> open</div>
+  </div>
+
+  <ul class="task-list" id="task-list" role="list" aria-label="Task list"></ul>
+
+  <div class="empty-state" id="empty-state" hidden>
+    <div class="glyph">// nothing here</div>
+    <p id="empty-state-text">No directives logged yet. Add one above.</p>
+  </div>
+
+  <footer>
+    <span class="footer-hint">
+      dbl-click to edit · ⌘/Ctrl+K to focus<br>
+      ↑↓ navigate · Space toggle · Del delete · Enter edit
+    </span>
+    <div class="footer-actions">
+      <button class="ghost-btn" id="import-btn" type="button">Import</button>
+      <button class="ghost-btn" id="export-btn" type="button">Export</button>
+      <button class="ghost-btn danger-hover" id="clear-completed" type="button">Clear completed</button>
+    </div>
+    <input type="file" id="import-file-input" accept="application/json" hidden>
+  </footer>
+</div>
+
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'directives.tasks.v1';
+  const IDB_NAME    = 'directives-db';
+  const IDB_STORE   = 'tasks';
+  const IDB_VERSION = 1;
+  const MAX_LEN     = 200;
+
+  /** =========================================================
+   *  STATE
+   *  ======================================================= */
+  let tasks         = [];
+  let currentFilter = 'all';   // 'all' | 'active' | 'completed'
+  let currentSort   = 'date';  // 'date' | 'status'
+  let editingId     = null;
+  let focusedId     = null;    // which task row has keyboard focus
+  let db            = null;    // IndexedDB instance (null = not open)
+
+  /** =========================================================
+   *  PERSISTENCE  — IndexedDB with localStorage fallback
+   *  ======================================================= */
+  function openIDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains(IDB_STORE)) {
+          d.createObjectStore(IDB_STORE, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  async function initStorage() {
+    try {
+      db = await openIDB();
+      // Migrate from localStorage if data exists there
+      const lsRaw = localStorage.getItem(STORAGE_KEY);
+      if (lsRaw) {
+        const lsTasks = JSON.parse(lsRaw);
+        if (lsTasks.length) {
+          await idbSaveAll(lsTasks);
+          localStorage.removeItem(STORAGE_KEY);
+          showToast('Migrated data to IndexedDB', 'success');
+        }
+      }
+      tasks = await idbLoadAll();
+      updateStorageBadge(true);
+    } catch (err) {
+      console.warn('IndexedDB unavailable, falling back to localStorage', err);
+      db = null;
+      tasks = lsLoad();
+      updateStorageBadge(false);
+    }
+    render();
+  }
+
+  function updateStorageBadge(isIDB) {
+    const badge = document.getElementById('storage-mode-badge');
+    if (isIDB) {
+      badge.textContent = 'indexed-db';
+      badge.classList.add('idb');
+      badge.title = 'Data persisted in IndexedDB (higher capacity)';
+    } else {
+      badge.textContent = 'local-only';
+      badge.title = 'Data persisted in localStorage';
+    }
+  }
+
+  /* --- IndexedDB helpers --- */
+  function idbTx(mode) {
+    return db.transaction(IDB_STORE, mode).objectStore(IDB_STORE);
+  }
+
+  function idbLoadAll() {
+    return new Promise((resolve, reject) => {
+      const req = idbTx('readonly').getAll();
+      req.onsuccess = e => resolve(e.target.result || []);
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  function idbPut(task) {
+    return new Promise((resolve, reject) => {
+      const req = idbTx('readwrite').put(task);
+      req.onsuccess = () => resolve();
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  function idbDelete(id) {
+    return new Promise((resolve, reject) => {
+      const req = idbTx('readwrite').delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  function idbSaveAll(arr) {
+    return new Promise((resolve, reject) => {
+      const tx    = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      arr.forEach(t => store.put(t));
+      tx.oncomplete = () => resolve();
+      tx.onerror    = e => reject(e.target.error);
+    });
+  }
+
+  /* --- localStorage helpers --- */
+  function lsLoad() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+
+  function lsSave() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch (e) {
+      showToast('Could not save — storage may be full', 'warn');
+    }
+  }
+
+  /* --- Unified save / delete --- */
+  async function saveTasks(changedTask) {
+    if (db) {
+      try { await idbPut(changedTask); } catch (e) { console.error('IDB put failed', e); }
+    } else {
+      lsSave();
+    }
+  }
+
+  async function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    if (db) {
+      try { await idbDelete(id); } catch (e) { console.error('IDB delete failed', e); }
+    } else {
+      lsSave();
+    }
+  }
+
+  async function saveAllTasks() {
+    if (db) {
+      try { await idbSaveAll(tasks); } catch (e) { console.error('IDB saveAll failed', e); }
+    } else {
+      lsSave();
+    }
+  }
+
+  function makeId() {
+    return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
+  }
+
+  /** =========================================================
+   *  TOASTS
+   *  ======================================================= */
+  const toastContainer = document.getElementById('toast-container');
+
+  function showToast(message, variant = 'info', duration = 2600) {
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (variant !== 'info' ? ' ' + variant : '');
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      toast.addEventListener('animationend', () => toast.remove(), { once: true });
+    }, duration);
+  }
+
+  /** =========================================================
+   *  CRUD
+   *  ======================================================= */
+  async function createTask(text) {
+    const task = {
+      id: makeId(),
+      text: text.trim(),
+      completed: false,
+      createdAt: Date.now(),
+    };
+    tasks.unshift(task);
+    await saveTasks(task);
+    render();
+  }
+
+  async function updateTaskText(id, newText) {
+    const trimmed = newText.trim();
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    if (trimmed) {
+      task.text = trimmed;
+      await saveTasks(task);
+      render();
+    } else {
+      removeTaskAnimated(id);
+    }
+  }
+
+  async function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    task.completed = !task.completed;
+    await saveTasks(task);
+    render();
+  }
+
+  async function deleteTaskImmediate(id) {
+    focusedId = null;
+    await deleteTask(id);
+    render();
+  }
+
+  async function clearCompleted() {
+    const count = tasks.filter(t => t.completed).length;
+    if (count === 0) return;
+    tasks = tasks.filter(t => !t.completed);
+    await saveAllTasks();
+    render();
+    showToast(`Cleared ${count} completed directive${count === 1 ? '' : 's'}`, 'success');
+  }
+
+  /** =========================================================
+   *  ANIMATED DELETE
+   *  ======================================================= */
+  const listEl = document.getElementById('task-list');
+
+  function removeTaskAnimated(id) {
+    const li = listEl.querySelector(`.task[data-id="${id}"]`);
+    if (!li) { deleteTaskImmediate(id); return; }
+
+    // Move focus to adjacent task before removing
+    const siblings = [...listEl.querySelectorAll('.task')];
+    const idx      = siblings.indexOf(li);
+    const nextFocus = siblings[idx + 1] || siblings[idx - 1] || null;
+
+    const height = li.offsetHeight;
+    li.style.height   = height + 'px';
+    li.style.overflow = 'hidden';
+    void li.offsetHeight;
+    li.classList.add('removing');
+    li.style.height = '0px';
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      li.removeEventListener('transitionend', finish);
+      deleteTaskImmediate(id).then(() => {
+        if (nextFocus) {
+          const target = listEl.querySelector(`.task[data-id="${nextFocus.dataset.id}"]`);
+          if (target) {
+            focusedId = nextFocus.dataset.id;
+            target.focus();
+          }
+        }
+      });
+    };
+    li.addEventListener('transitionend', finish);
+    setTimeout(finish, 260);
+  }
+
+  /** =========================================================
+   *  SORTING + FILTERING
+   *  ======================================================= */
+  function getSortedFilteredTasks() {
+    let list;
+    if (currentFilter === 'active')    list = tasks.filter(t => !t.completed);
+    else if (currentFilter === 'completed') list = tasks.filter(t => t.completed);
+    else                                list = [...tasks];
+
+    if (currentSort === 'date') {
+      // newest first (original behaviour)
+      list.sort((a, b) => b.createdAt - a.createdAt);
+    } else {
+      // status: active first, then by date within each group
+      list.sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return b.createdAt - a.createdAt;
+      });
+    }
+    return list;
+  }
+
+  /** =========================================================
+   *  RENDERING
+   *  ======================================================= */
+  const emptyStateEl     = document.getElementById('empty-state');
+  const emptyStateTextEl = document.getElementById('empty-state-text');
+  const metaCountEl      = document.getElementById('meta-count');
+  const clearBtn         = document.getElementById('clear-completed');
+
+  function render() {
+    const visible = getSortedFilteredTasks();
+    listEl.innerHTML = '';
+
+    if (visible.length === 0) {
+      emptyStateEl.hidden = false;
+      const messages = {
+        all:       'No directives logged yet. Add one above.',
+        active:    'Nothing active — everything is resolved.',
+        completed: 'No directives have been resolved yet.',
+      };
+      emptyStateTextEl.textContent = messages[currentFilter];
+    } else {
+      emptyStateEl.hidden = true;
+      const frag = document.createDocumentFragment();
+      visible.forEach(task => frag.appendChild(buildTaskElement(task)));
+      listEl.appendChild(frag);
+
+      // Restore focus if a task had keyboard focus
+      if (focusedId) {
+        const focusEl = listEl.querySelector(`.task[data-id="${focusedId}"]`);
+        if (focusEl) focusEl.focus({ preventScroll: true });
+      }
+    }
+
+    const openCount = tasks.filter(t => !t.completed).length;
+    metaCountEl.innerHTML = `<span>${openCount}</span> open`;
+
+    const completedCount = tasks.filter(t => t.completed).length;
+    clearBtn.disabled = completedCount === 0;
+  }
+
+  function buildTaskElement(task) {
+    const li = document.createElement('li');
+    li.className = 'task' + (task.completed ? ' completed' : '');
+    li.dataset.id  = task.id;
+    li.tabIndex    = 0;   // make rows focusable for keyboard navigation
+    li.setAttribute('role', 'listitem');
+    li.setAttribute('aria-label',
+      `${task.text}. ${task.completed ? 'Completed' : 'Active'}. Press Space to toggle, Delete to remove, Enter to edit.`
+    );
+
+    const toggle = document.createElement('button');
+    toggle.className = 'task-toggle';
+    toggle.setAttribute('data-action', 'toggle');
+    toggle.setAttribute('aria-label', task.completed ? 'Mark as active' : 'Mark as completed');
+    toggle.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#08110f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    li.appendChild(toggle);
+
+    if (editingId === task.id) {
+      const input = document.createElement('input');
+      input.type      = 'text';
+      input.className = 'task-edit-input';
+      input.value     = task.text;
+      input.setAttribute('data-action', 'edit-input');
+      input.maxLength = MAX_LEN;
+      li.appendChild(input);
+      requestAnimationFrame(() => {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      });
+    } else {
+      const span = document.createElement('span');
+      span.className = 'task-text';
+      span.setAttribute('data-action', 'edit-trigger');
+      span.textContent = task.text;
+      li.appendChild(span);
+    }
+
+    const del = document.createElement('button');
+    del.className = 'task-delete';
+    del.setAttribute('data-action', 'delete');
+    del.setAttribute('aria-label', 'Delete directive');
+    del.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    li.appendChild(del);
+
+    return li;
+  }
+
+  /** =========================================================
+   *  INPUT VALIDATION (COMPOSER)
+   *  ======================================================= */
+  const taskInput  = document.getElementById('task-input');
+  const charCounter = document.getElementById('char-counter');
+  const kbdHint    = document.getElementById('kbd-hint');
+
+  function refreshCharCounter() {
+    const len = taskInput.value.length;
+    if (len === 0) {
+      charCounter.textContent = '';
+      charCounter.classList.remove('near-limit');
+      kbdHint.hidden = false;
+      return;
+    }
+    kbdHint.hidden = true;
+    charCounter.textContent = `${len} / ${MAX_LEN}`;
+    charCounter.classList.toggle('near-limit', len >= MAX_LEN - 20);
+  }
+
+  taskInput.addEventListener('input', () => {
+    refreshCharCounter();
+    if (taskInput.value.length >= MAX_LEN && !taskInput.dataset.warned) {
+      taskInput.dataset.warned = '1';
+      showToast(`Directives are capped at ${MAX_LEN} characters`, 'warn');
+    } else if (taskInput.value.length < MAX_LEN) {
+      delete taskInput.dataset.warned;
+    }
+  });
+
+  function triggerShake(el) {
+    el.classList.remove('input-shake');
+    void el.offsetWidth;
+    el.classList.add('input-shake');
+    el.addEventListener('animationend', () => el.classList.remove('input-shake'), { once: true });
+  }
+
+  /** =========================================================
+   *  EVENT WIRING
+   *  ======================================================= */
+
+  /* Composer submit */
+  document.getElementById('composer').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = taskInput.value;
+    if (!value.trim()) {
+      triggerShake(taskInput);
+      showToast(value.length > 0 ? "A directive can't be just whitespace" : 'Type a directive first', 'warn');
+      return;
+    }
+    createTask(value);
+    taskInput.value = '';
+    refreshCharCounter();
+    taskInput.focus();
+  });
+
+  /* Filter tabs */
+  document.getElementById('filter-tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    currentFilter = btn.dataset.filter;
+    document.querySelectorAll('.tab').forEach(t => {
+      const isActive = t === btn;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', String(isActive));
+    });
+    focusedId = null;
+    render();
+  });
+
+  /* Sort toggle */
+  document.querySelector('.sort-toggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('.sort-btn');
+    if (!btn) return;
+    currentSort = btn.dataset.sort;
+    document.querySelectorAll('.sort-btn').forEach(b => {
+      const isActive = b === btn;
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-pressed', String(isActive));
+    });
+    focusedId = null;
+    render();
+    showToast(`Sorted by ${currentSort === 'date' ? 'newest first' : 'status (active → done)'}`, 'info', 1800);
+  });
+
+  /* Clear completed */
+  clearBtn.addEventListener('click', clearCompleted);
+
+  /* Task list — delegated CLICK handling */
+  listEl.addEventListener('click', (e) => {
+    const taskEl = e.target.closest('.task');
+    if (!taskEl) return;
+    const id     = taskEl.dataset.id;
+    const action = e.target.closest('[data-action]')?.dataset.action;
+
+    if (action === 'toggle') {
+      toggleTask(id);
+    } else if (action === 'delete') {
+      removeTaskAnimated(id);
+    }
+  });
+
+  /* Task list — double-click to edit */
+  listEl.addEventListener('dblclick', (e) => {
+    const trigger = e.target.closest('[data-action="edit-trigger"]');
+    if (!trigger) return;
+    const taskEl = e.target.closest('.task');
+    editingId = taskEl.dataset.id;
+    render();
+  });
+
+  /* Task list — edit-input keyboard events */
+  listEl.addEventListener('keydown', (e) => {
+    const input = e.target.closest('[data-action="edit-input"]');
+    if (input) {
+      const taskEl = e.target.closest('.task');
+      if (e.key === 'Enter') {
+        updateTaskText(taskEl.dataset.id, input.value);
+        editingId = null;
+        focusedId = taskEl.dataset.id;
+      } else if (e.key === 'Escape') {
+        editingId = null;
+        focusedId = taskEl.dataset.id;
+        render();
+      }
+      return; // don't fall through to row-level nav when editing
+    }
+
+    /* -------------------------------------------------------
+     *  KEYBOARD NAVIGATION on task rows
+     * ------------------------------------------------------- */
+    const taskEl = e.target.closest('.task');
+    if (!taskEl) return;
+
+    const id       = taskEl.dataset.id;
+    const siblings = [...listEl.querySelectorAll('.task')];
+    const idx      = siblings.indexOf(taskEl);
+
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'ArrowRight': {
+        e.preventDefault();
+        const next = siblings[idx + 1];
+        if (next) {
+          focusedId = next.dataset.id;
+          next.focus();
+        }
+        break;
+      }
+      case 'ArrowUp':
+      case 'ArrowLeft': {
+        e.preventDefault();
+        const prev = siblings[idx - 1];
+        if (prev) {
+          focusedId = prev.dataset.id;
+          prev.focus();
+        }
+        break;
+      }
+      case ' ': {
+        e.preventDefault();
+        toggleTask(id);
+        focusedId = id;
+        break;
+      }
+      case 'Delete':
+      case 'Backspace': {
+        e.preventDefault();
+        removeTaskAnimated(id);
+        break;
+      }
+      case 'Enter': {
+        e.preventDefault();
+        editingId = id;
+        focusedId = id;
+        render();
+        break;
+      }
+    }
+  });
+
+  /* Track focusedId when a row gains focus via mouse/tab */
+  listEl.addEventListener('focusin', (e) => {
+    const taskEl = e.target.closest('.task');
+    if (taskEl) focusedId = taskEl.dataset.id;
+  });
+
+  /* Edit-input blur — save */
+  listEl.addEventListener('blur', (e) => {
+    const input = e.target.closest('[data-action="edit-input"]');
+    if (!input) return;
+    const taskEl = e.target.closest('.task');
+    if (editingId === taskEl.dataset.id) {
+      updateTaskText(taskEl.dataset.id, input.value);
+      editingId = null;
+    }
+  }, true);
+
+  /** =========================================================
+   *  GLOBAL KEYBOARD SHORTCUTS
+   *  ======================================================= */
+  document.addEventListener('keydown', (e) => {
+    // ⌘/Ctrl+K — focus composer
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      taskInput.focus();
+      taskInput.select();
+    }
+    // Escape in composer — blur
+    if (e.key === 'Escape' && document.activeElement === taskInput) {
+      taskInput.blur();
+    }
+  });
+
+  /** =========================================================
+   *  EXPORT / IMPORT
+   *  ======================================================= */
+  document.getElementById('export-btn').addEventListener('click', () => {
+    if (tasks.length === 0) {
+      showToast('Nothing to export yet', 'warn');
+      return;
+    }
+    const payload = JSON.stringify(tasks, null, 2);
+    const blob    = new Blob([payload], { type: 'application/json' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    const stamp   = new Date().toISOString().slice(0, 10);
+    a.href        = url;
+    a.download    = `directives-export-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${tasks.length} directive${tasks.length === 1 ? '' : 's'}`, 'success');
+  });
+
+  const importInput = document.getElementById('import-file-input');
+  document.getElementById('import-btn').addEventListener('click', () => importInput.click());
+
+  importInput.addEventListener('change', () => {
+    const file = importInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!Array.isArray(parsed)) throw new Error('not an array');
+
+        const imported = parsed
+          .filter(item => item && typeof item.text === 'string' && item.text.trim())
+          .map(item => ({
+            id:        makeId(),
+            text:      item.text.trim().slice(0, MAX_LEN),
+            completed: Boolean(item.completed),
+            createdAt: typeof item.createdAt === 'number' ? item.createdAt : Date.now(),
+          }));
+
+        if (imported.length === 0) {
+          showToast('No valid directives found in that file', 'warn');
+          return;
+        }
+
+        tasks = [...imported, ...tasks];
+        await saveAllTasks();
+        render();
+        showToast(`Imported ${imported.length} directive${imported.length === 1 ? '' : 's'}`, 'success');
+      } catch (err) {
+        console.error('Import failed', err);
+        showToast('Could not read that file as directive JSON', 'warn');
+      } finally {
+        importInput.value = '';
+      }
+    };
+    reader.onerror = () => showToast('Failed to read the file', 'warn');
+    reader.readAsText(file);
+  });
+
+  /** =========================================================
+   *  INIT
+   *  ======================================================= */
+  initStorage();
+})();
+</script>
+
+</body>
+</html>
